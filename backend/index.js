@@ -2,13 +2,9 @@ import express from "express";
 import http from "http";
 import { Server } from "socket.io";
 import path from "path";
-import { fileURLToPath } from "url";
-
-// Fix for ES modules: get __dirname equivalent
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const app = express();
+
 const server = http.createServer(app);
 
 const io = new Server(server, {
@@ -28,8 +24,8 @@ io.on("connection", (socket) => {
   socket.on("join", ({ roomId, userName }) => {
     if (currentRoom) {
       socket.leave(currentRoom);
-      rooms.get(currentRoom)?.delete(currentUser);
-      io.to(currentRoom).emit("userJoined", Array.from(rooms.get(currentRoom) || []));
+      rooms.get(currentRoom).delete(currentUser);
+      io.to(currentRoom).emit("userJoined", Array.from(rooms.get(currentRoom)));
     }
 
     currentRoom = roomId;
@@ -43,7 +39,7 @@ io.on("connection", (socket) => {
 
     rooms.get(roomId).add(userName);
 
-    io.to(roomId).emit("userJoined", Array.from(rooms.get(roomId)));
+    io.to(roomId).emit("userJoined", Array.from(rooms.get(currentRoom)));
   });
 
   socket.on("codeChange", ({ roomId, code }) => {
@@ -52,10 +48,11 @@ io.on("connection", (socket) => {
 
   socket.on("leaveRoom", () => {
     if (currentRoom && currentUser) {
-      rooms.get(currentRoom)?.delete(currentUser);
-      io.to(currentRoom).emit("userJoined", Array.from(rooms.get(currentRoom) || []));
+      rooms.get(currentRoom).delete(currentUser);
+      io.to(currentRoom).emit("userJoined", Array.from(rooms.get(currentRoom)));
 
       socket.leave(currentRoom);
+
       currentRoom = null;
       currentUser = null;
     }
@@ -71,24 +68,23 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     if (currentRoom && currentUser) {
-      rooms.get(currentRoom)?.delete(currentUser);
-      io.to(currentRoom).emit("userJoined", Array.from(rooms.get(currentRoom) || []));
+      rooms.get(currentRoom).delete(currentUser);
+      io.to(currentRoom).emit("userJoined", Array.from(rooms.get(currentRoom)));
     }
-    console.log("User Disconnected");
+    console.log("user Disconnected");
   });
-});
-
-// Serve frontend
-app.use(express.static(path.join(__dirname, "frontend", "dist")));
-
-// Fixed route pattern for Express v5+
-app.get("/*", (req, res) => {
-  res.sendFile(path.join(__dirname, "frontend", "dist", "index.html"));
 });
 
 const port = process.env.PORT || 5001;
 
+const __dirname = path.resolve();
+
+app.use(express.static(path.join(__dirname, "/frontend/dist")));
+
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "frontend", "dist", "index.html"));
+});
 
 server.listen(port, () => {
-  console.log(`Server is working on port ${port}`);
+  console.log("server is working on port 5000");
 });
